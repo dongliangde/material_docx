@@ -1,3 +1,5 @@
+[TOC]
+
 # Java
 
 ## 解决哈希冲突的常用方法分析
@@ -64,7 +66,7 @@
 
 ## JUC
 
-在 `java.util.concurrent` 包（JUC）中，有各式各样的并发控制工具，这里我们简单介绍几个常用的工具及其使用方式。
+在 `java.util.concurrent` 包（JUC）中，有各式各样的并发控制工具。
 
 ## synchronized原理
 
@@ -154,3 +156,311 @@ Java中有AtomicStampedReference来解决这个问题，他加入了预期标志
 **循环时间长开销大**：自旋CAS的方式如果长时间不成功，会给CPU带来很大的开销。
 
 **只能保证一个共享变量的原子操作**：只对一个共享变量操作可以保证原子性，但是多个则不行，多个可以通过AtomicReference来处理或者使用锁synchronized实现。
+
+## 双亲委派模型
+
+### 什么是双亲委派模型？
+
+#### JVM的类加载器
+
+![](E:\workSpace\docx\material_docx\java\img\java-1.png)
+
+JVM自带的类加载器包括启动类加载器、扩展类加载器和应用程序类加载器，此外还可以自定义类加载器。每个类加载器的作用都不一样。
+
+**启动类加载器（Bootstrap ClassLoader）**
+
+负责加载 JAVA_HOME\lib 目录下的类库，也就是JDK核心类库。
+
+**扩展类加载器（Extension ClassLoader）**
+
+负责加载 JAVA_HOME\lib\ext 这个子目录下的类库。
+
+**应用程序类加载器（Application ClassLoader）**
+
+负责加载用户类路径 Classpath 上的类库。
+
+**自定义类加载器**
+
+通过继承 java.lang.ClassLoader，根据不同的需求来实现自定义的类加载器，可以用来加载用户指定目录下的Class。在实际开发中，通过继承JDK中的类或者实现JDK中的接口来实现自定义类加载器。
+
+#### 类加载器工作流程：双亲委派
+
+**双亲委派模型（Parent Delegation Model)**，双亲委派模型包括两个过程，向上委派和向下委派。
+
+![](E:\workSpace\docx\material_docx\java\img\java-2.png)
+
+**向上委派**
+
+一个类在收到类加载请求后，不会自己马上加载这个类，而是把这个类的加载请求委派给它的父类去完成。父类收到这个请求后又会继续向上委派给父类的父类。以此类推，直到所有的请求委派到**Bootstrap ClassLoader**。
+
+**向下委派**
+
+当**Bootstrap ClassLoader**在接收到类加载请求后，如果发现自己无法加载这个类，比如这个类的Class文件不在加载路径中，那么父类就会向下委派子类加载器来加载这个类，直到这个请求被成功加载。
+
+如果一直到最底层的自定义加载器都没有找到这个类的Class文件，那么JVM就会抛出**ClassNotFound**异常。
+
+#### 为什么采用双亲委派模型？
+
+双亲委派模型的主要作用是保证JVM加载类的一致性，尤其是一些JDK中最基础的类。
+
+如果没有使用双亲委派模型，由各个类加载器自行加载的话，如果用户自己编写了一个称为 java.lang.Object 的类，并放在程序的ClassPath中，那系统将会出现多个不同的 Object 类，这样会导致Java类型的混乱。
+
+双亲委派模型可以保证对于 Java.lang.Object 类，无论哪个类加载器要加载它，最终都会委派给Bootstrap ClassLoader，一定会加载 JAVA_HOME/lib 中的 Object 类。
+
+另外双亲委派模型也可避免同一个类被加载多次，防止内存中出现多份同样的字节码。
+
+**面试中经常会问到的一个问题：可以不可以自己写个String类？**
+
+如果我们定义的完全类名是 java.lang.String, 我们知道基于双亲委派模型，会通过父加载器加载，那么最终到 Bootstrap ClassLoader 加载的就是标准JDK中的 String 类。其他加载器看到 String 类已经被加载，也就不会再重新加载 String 类了。
+
+但是如果我们自定义的 String 类，包名不同的话，是可以重写的，在JVM看来，这其实是两个不同的类。
+
+不过需要注意的是，双亲委派模型只是一种建议，而并非强制，根据场景需要是可以被破坏的，比如JDBC、JNDI就破坏了双亲委派模型的类加载顺序。
+
+### 为什么要打破双亲委派模型
+
+#### 双亲委派模型
+
+![](E:\workSpace\docx\material_docx\java\img\java-3.png)
+
+双亲委派模型就是将类加载器进行分层。在触发类加载的时候，当前类加载器会从低层向上委托父类加载器去加载。每层类加载器在加载时会判断该类是否已经被加载过，如果已经加载过，就不再加载了。这种设计能够避免重复加载类、核心类被篡改等情况发生。
+
+双亲委派模型很好地解决了各个类加载器的基础类的统一问题，越基础的类由越上层的加载器进行加载。Java基础类一般都是被用户代码所调用的，那么是否存在基础类需要调用用户代码的情况呢？
+
+主要场景就是JDK自身只提供接口规范，然后让第三方厂商去提供接口的具体实现，这样就会出现基础类调用厂商代码的情况，比如JDBC驱动类的加载，这类接口统称为服务提供者接口（SPI）。
+
+**服务提供者接口（SPI）**
+
+我们系统里抽象的各个模块，往往有很多不同的实现方案，比如日志模块、XML解析模块、JDBC模块等。为了实现模块实现的可插拔，在模块装配的时候就需要一种服务发现机制。Java SPI就是一种为某个接口寻找实现的机制。
+
+Java 提供了很多**服务提供者接口（SPI：Service Provider Interface）**，允许第三方为这些接口提供实现。常见的 SPI 包括 JDBC、JCE、JNDI、JAXP 和 JBI 等。
+
+SPI机制允许Java程序在运行时才来加载具体的接口实现类，使用者只需要按照SPI规范指定具体的接口实现即可。通过这种方式，就实现策略模式和热拔插效果。
+
+这些 SPI 接口在Java 核心库中，而实现代码则是在类路径（ClassPath）下的Jar包中。核心库中涉及到SPI接口的代码需要加载接口实现类。
+
+#### 为何要破坏双亲委派模型？
+
+以JDBC为例，它的代码在rt.jar中，由启动类加载器去加载，但它需要调用厂商实现的SPI代码，这些代码部署在ClassPath下面。
+
+根据双亲委派模型，启动类加载器无法直接委派应用程序类加载器（Application ClassLoader）来加载SPI的实现代码。那么启动类加载器如何找到这些代码呢？
+
+JDK引入了**线程上下文类加载器（TCCL：Thread Context ClassLoader）**，线程上下文类加载器破坏了“双亲委派模型”，可以在执行线程中抛弃双亲委派加载链，利用线程上下文类加载器去加载所需要的SPI代码。
+
+TCCL是从JDK1.2开始引入的，可以通过 java.lang.Thread 类中的 getContextClassLoader()和 setContextClassLoader(ClassLoader cl) 方法来获取和设置线程的上下文类加载器。如果没有手动设置上下文类加载器，线程将继承其父线程的上下文类加载器，初始线程的默认上下文类加载器是 Application ClassLoader。
+
+![](E:\workSpace\docx\material_docx\java\img\java-4.png)
+
+连接Mysql数据库时需要加载Mysql的JDBC驱动 com.mysql.jdbc.Driver。
+
+DriverManager调用 getConnection() 连接数据库时，会触发 ServiceLoader.load(Driver.class)。
+
+load() 函数会通过 Thread.currentThread().getContextClassLoader(）获得当前线程的上下文类加载器，完成驱动类加载。
+
+![](E:\workSpace\docx\material_docx\java\img\java-5.png)
+
+接下来在Classpath的jar包中查找，如存在META-INF/services/java.sql.Driver 文件，则加载其实现类，比如mysql-connector-java-5.1.44.jar。从上图的调用链中，可以知道此时使用的类加载器是线程上下文类加载器，这就是SPI机制的核心原理。
+
+Spring框架也用到了**线程上下文类加载器（TCCL）**，来加载WEB-INF下的用户代码，同样也是打破了双亲委派模型的加载链。
+
+## 并发的三大特性
+
+### 可见性
+
+当一个线程修改了共享变量的值，其他线程能够看到修改的值。Java 内存模型是通过在变量修改后将新值同步回主内存，在变量读取前从主内存刷新变量值这种依赖主内存作为传递媒介的方法来实现可见性的。
+
+如线程 A 修改一个普通变量的值，然后向主内存进行回写，另外一条线程 B 在线程 A 回写完成了之后再从主内存进行读取操作，新变量的值才会对线程 B 可见。
+
+#### 如何保证可见性
+
+- 通过 **volatile 关键字**标记内存屏障保证可见性。
+- 通过 **synchronized 关键字**定义同步代码块或者同步方法保障可见性。
+- 通过 **Lock 接口**保障可见性。
+- 通过 **Atomic 类型**保障可见性。
+- 通过 **final 关键字**保障可见性。
+
+### 原子性
+
+一个或多个操作，要么全部执行且在执行过程中不被任何因素打断，要么全部不执行。在 Java 中，对**基本数据类型的变量**的**读取**和**赋值**操作是原子性操作。
+
+#### 如何保证原子性
+
+- 通过 **synchronized 关键字**定义同步代码块或者同步方法保障原子性。
+- 通过 **Lock 接口**保障原子性。
+- 通过 **Atomic 类型**保障原子性。
+
+### 有序性
+
+即程序执行的顺序按照代码的先后顺序执行，JVM 存在**指令重排**，所以存在有序性问题。
+
+#### 如何保证有序性
+
+- 通过 **synchronized关键字** 定义同步代码块或者同步方法保障可见性。
+- 通过 **Lock接口** 保障可见性。
+
+## Volatile原理
+
+### 概述
+
+要了解并发编程，首先就需要了解并发编程的三大特性：**可见性、原子性和有序性。**volatile保证了**可见性和有序性**，但是**不保证原子性**。
+
+### volatile保证可见性
+
+![](E:\workSpace\docx\material_docx\java\img\20211219171704.png)
+
+**volatile通过cpu的总线嗅探机制，将其他也正在使用该变量的线程的数据失效掉，使得这些线程要重新读取主内存中的值**，最后线程A就发现flag的值被改变了。
+
+### Volatile保证有序性
+
+Volatile通过内存屏障禁止指令的重排序，从而保证执行的有序性。
+
+### Volatile不保证原子性
+
+Volatile不保证原子性
+
+### Volatile的使用场景
+
+双重校验单例：
+
+```
+public class Singleton {
+    private static Singleton Instance;
+    private Singleton(){};
+    public static Singleton getInstance(){
+        if (Instance==null){
+            synchronized (Singleton.class){
+                Instance=new Singleton();
+            }
+        }
+        return Instance;
+    }
+}
+```
+
+单例模式最经典的一段代码，获取实例对象时如果为空就初始化，如果不为空就返回实例，看着没有问题，但是在高并发环境下这段代码是会出问题的。
+Instance=new Singleton(); 实例化一个对象时，需要经历三步：
+
+![](E:\workSpace\docx\material_docx\java\img\20201203215824482.png)
+
+**这三步是有可能发生指令重排序的**，因此有可能是先申请内存空间，再把对象赋值到内存里，最后实例化对象。**第一步->第三步->第二步**的方式来执行。
+
+当此时有两个线程A和B同时申请对象的时候，当线程A执行到重排序后的第二步时
+
+![](E:\workSpace\docx\material_docx\java\img\2020120321584594.png)
+
+线程B执行了if (Instance==null)这行代码，因为此时instance已经赋值到内存里了，所以会直接return Instance; 但是！这个对象并没有被实例化，因此线程B调用该实例时，就报错了。
+
+这个问题的解决办法就是volatile禁止重排序
+
+```
+private static volatile Singleton Instance; 
+```
+
+### Volatile可能会导致的问题
+
+如果一个程序中用了大量的volatile，就有可能会导致总线风暴，所谓总线风暴，就是指当volatile修饰的变量发生改变时，总线嗅探机制机会将其他内存中的这个变量失效掉，如果volatile很多，无效交互会导致总线带宽达到峰值。因此对volatile的使用也需要适度。
+
+## AQS简介
+
+AQS（AbstractQueuedSynchronizer）为抽象队列同步器，简单的说AQS就是一个抽象类，抽象类AbstractQueuedSynchronizer，没有实现任何的接口，仅仅定义了同步状态（state）的获取和释放的方法。它提供了一个FIFO队列，多线程竞争资源的时候，没有竞争到的线程就会进入队列中进行等待，并且定义了一套多线程访问共享资源的同步框架。
+
+在AQS中的锁类型有两种：分别是Exclusive(独占锁)和Share(共享锁)。
+
+独占锁：就是每次都只有一个线程运行，例如ReentrantLock。
+
+共享锁：就是同时可以多个线程运行，如Semaphore、CountDownLatch、ReentrantReadWriteLock。
+
+### AQS源码分析
+
+AQS的源码可以看到对于**state共享变量**，使用**volatile关键字**进行修饰，从而**保证了可见性**
+
+![](E:\workSpace\docx\material_docx\java\img\20211219173040.png)
+
+从上面的源码中可以看出，对于state的修改操作提供了setState和compareAndSetState，那么为什么要提供这两个对state的修改呢？
+
+因为compareAndSetState方法通常使用在获取到锁之前，当前线程不是锁持有者，对于state的修改可能存在线程安全问题，所以需要保证对state修改的原子性操作。
+
+而setState方法通常用于当前正持有锁的线程对state共享变量进行修改，因为不存在竞争，是线程安全的，所以没必要使用CAS操作。
+
+分析了AQS的源码的实现，接下来我们看看AQS的实现的原理。
+
+### AQS实现原理
+
+AQS中维护了一个**FIFO队列**，并且**该队列式一个双向链表**，链表中的每一个节点为**Node节点**，**Node类是AbstractQueuedSynchronizer中的一个内部类**。
+
+AQS中Node内部类的源码
+
+```
+static final class Node {
+        static final Node SHARED = new Node();
+        static final Node EXCLUSIVE = null;
+        static final int CANCELLED =  1;
+        static final int SIGNAL    = -1;
+        static final int CONDITION = -2;
+        static final int PROPAGATE = -3;
+        volatile int waitStatus;
+        volatile Node prev;
+        volatile Node next;
+        volatile Thread thread;
+        Node nextWaiter;
+
+        final boolean isShared() {
+            return nextWaiter == SHARED;
+        }
+
+        final Node predecessor() throws NullPointerException {
+            Node p = prev;
+            if (p == null)
+                throw new NullPointerException();
+            else
+                return p;
+        }
+
+        Node() {    // Used to establish initial head or SHARED marker
+        }
+
+        Node(Thread thread, Node mode) {     // Used by addWaiter
+            this.nextWaiter = mode;
+            this.thread = thread;
+        }
+
+        Node(Thread thread, int waitStatus) { // Used by Condition
+            this.waitStatus = waitStatus;
+            this.thread = thread;
+        }
+    }
+```
+
+可以看到上面的Node类比较简单，只是对于每个Node节点拥有的属性进行维护，在Node内部类中最重要的基本构成就是这几个：
+
+```
+volatile Node prev;
+volatile Node next;
+volatile Thread thread;
+```
+
+在FIFO队列中，头节点占有锁，也就是头节点才是锁的持有者，尾指针指向队列的最后一个等待线程节点，除了头节点和尾节点，节点之间都有前驱指针和后继指针。
+
+在AQS中维护了一个共享变量state，标识当前的资源是否被线程持有，多线程竞争的时候，会去判断state是否为0，尝试的去把state修改为1。
+
+## ReentrantLock
+
+### Semaphore
+
+### CountDownLatch
+
+### ReentrantReadWriteLock
+
+## CAS
+
+### 简介
+
+在分析ReentrantLock的具体实现的源码中，可以看出所有涉及设置共享变量的操作，都会指向CAS操作，保证原子性操作。CAS(compare and swap)原语理解就是比较并交换的意思，CAS是一种乐观锁的实现。在CAS的算法实现中有三个值：更新的变量、旧的值、新值。在修改共享资源时候，会与原值进行比较，若是等于原值，就修改为新值。于是在这里的算法实现下，即使不加锁，也能保证数据的可见性，即使的发现数据是否被更改，若是数据已经被更新则写操作失败。但是CAS也会引发ABA的问题。
+
+### ABA问题
+
+ABA问题就是假如有两个线程，同一时间读取一个共享变量state=1，此时两个线程都已经将state的副本赋值到自己的工作内存中。当线程一对state修改state=state+1，并且写入到主存中，然后线程一又对state=state-1写入到主存，此时主存的state是变化了两次，只不过又变回了原来的值。那么此时线程二修改state的时候就会修改成功，这就是ABA问题。对于ABA问题的解决方案就是加版本号（version），每次进行比较的时候，也会比较版本号。因为版本版是只增不减，比如以时间作为版本号，每一时刻的时间都不一样，这样就能避免ABA的问题。
+
+### 性能分析
+
+相对于synchronized的阻塞算法的实现，CAS采用的是乐观锁的非阻塞算法的实现，一般CPU在进行线程的上下文切换的时间比执行CPU的指令集的时间长，所以CAS操作在性能上也有了很大的提升。但是所有的算法都是没有最完美的，在执行CAS的操作中，没有更新成功的就会自旋，这样也会消耗CPU的资源，对于CPU来说是不友好的。
