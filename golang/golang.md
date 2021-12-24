@@ -32,11 +32,11 @@ Hugo是由Go语言实现的静态网站生成器。简单、易用、高效、�
 
 ### Kubernetes(容器管理工具)
 
-Kubernetes，也称为 K8s，是一个开源系统，用于 跨多个主机管理[容器化应用程序](https://link.zhihu.com/?target=https%3A//kubernetes.io/docs/concepts/overview/what-is-kubernetes/)。它提供了用于部署、维护和扩展应用程序的基本机制。
+Kubernetes，也称为 K8s，是一个开源系统，用于 跨多个主机管理[容器化应用程序](https://link.zhihu.com/?target=https%3A//kubernetes.io/docs/concepts/overview/what-is-kubernetes)。它提供了用于部署、维护和扩展应用程序的基本机制。
 
 ### Docker(容器)
 
-Docker是一个开源的引擎，可以轻松的为任何应用创建一个轻量级的、可移植的、自给自足的容器。开发者在笔记本上编译测试通过的容器可以批量地在生产环境中部署，包括VMs（虚拟机）、 [bare metal](https://link.zhihu.com/?target=http%3A//www.whatis.com.cn/word_5275.htm)、OpenStack 集群和其他的基础应用平台。
+Docker是一个开源的引擎，可以轻松的为任何应用创建一个轻量级的、可移植的、自给自足的容器。开发者在笔记本上编译测试通过的容器可以批量地在生产环境中部署，包括VMs（虚拟机）、 [bare metal](https://link.zhihu.com/?target=http%3A//www.whatis.com.cn/word\_5275.htm)、OpenStack 集群和其他的基础应用平台。
 
 ### Gin(web框架)
 
@@ -72,7 +72,7 @@ NSQ是实时的分布式消息平台。它的设计目标是为在多台计算�
 
 ### gin-vue-admin(gin、gorm脚手架)
 
-Gin-vue-admin是一个基于[vue](https://link.zhihu.com/?target=https%3A//vuejs.org/)和[gin](https://link.zhihu.com/?target=https%3A//gin-gonic.com/)开发的全栈前后端分离的后台管理系统，集成jwt鉴权，动态路由，动态菜单，casbin鉴权，表单生成器，代码生成器等功能，提供多种示例文件，让您把更多时间专注在业务开发上。
+Gin-vue-admin是一个基于[vue](https://link.zhihu.com/?target=https%3A//vuejs.org)和[gin](https://link.zhihu.com/?target=https%3A//gin-gonic.com)开发的全栈前后端分离的后台管理系统，集成jwt鉴权，动态路由，动态菜单，casbin鉴权，表单生成器，代码生成器等功能，提供多种示例文件，让您把更多时间专注在业务开发上。
 
 ### go-admin(gin、gorm脚手架)
 
@@ -98,7 +98,7 @@ Dapr 是一个可移植的、事件驱动的运行时，用于跨云和边缘构
 
 ### Hugo(个人博客生成器)
 
-Hugo 是一个用[Go](https://link.zhihu.com/?target=https%3A//golang.org/)编写的静态 HTML 和 CSS 网站生成器。它针对速度、易用性和可配置性进行了优化。Hugo 获取包含内容和模板的目录，并将它们呈现为一个完整的 HTML 网站。
+Hugo 是一个用[Go](https://link.zhihu.com/?target=https%3A//golang.org)编写的静态 HTML 和 CSS 网站生成器。它针对速度、易用性和可配置性进行了优化。Hugo 获取包含内容和模板的目录，并将它们呈现为一个完整的 HTML 网站。
 
 ### Martini(web框架)
 
@@ -116,7 +116,7 @@ YoyoGo 简单、轻量、快速、基于依赖注入的微服务框架。
 
 TiDB是一个与MySQL协议兼容的开源分布式HTAP数据库。
 
-### im_service(即时通讯框架)
+### im\_service(即时通讯框架)
 
 golang即时通讯服务器。
 
