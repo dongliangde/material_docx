@@ -159,7 +159,7 @@ apt-cache madison kubeadm
 ### 将包下载到本地
 
 ```
-apt-get install -y --download-only -o dir::cache::archives=/home/k8s kubelet=1.23.1 kubeadm=1.23.1 kubectl=1.23.1
+apt-get install  kubelet=1.23.1-00 kubeadm=1.23.1-00 kubectl=1.23.1-00
 ```
 
 ### 离线安装 k8s
